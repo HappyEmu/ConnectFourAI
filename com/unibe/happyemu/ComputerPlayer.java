@@ -38,9 +38,9 @@ public class ComputerPlayer implements IPlayer
 	private static final int[] sortedColumns = { 3, 2, 4, 1, 5, 0, 6};
 	
 	private static final int MAX_DEPTH = 42;
-	private static final int INITIAL_DEPTH = 8;
+	private static final int INITIAL_DEPTH = 10;
 	private static final int SAFETY_TIME = 20;
-	private static final int TIMEOUT_TIME = 5000;
+	private static final int TIMEOUT_TIME = 10000;
 	
 	private static final int WINNING_SCORE = 1000;
 	private static final int UNDEF_SCORE = 1000000;
