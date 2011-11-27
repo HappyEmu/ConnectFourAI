@@ -210,5 +210,14 @@ public class ComputerPlayer implements IPlayer
 		{
 			super("Computation timeout occured!");
 		}
-	}	
+	}
+	
+	private class BestMove
+	{
+		private int column = -1;
+		public void set(int c)
+		{
+			this.column = c;
+		}
+	}
 }
