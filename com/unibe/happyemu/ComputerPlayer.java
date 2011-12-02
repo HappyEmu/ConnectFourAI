@@ -8,13 +8,6 @@ import com.unibe.happyemu.VierGewinnt.Token;
 
 public class ComputerPlayer implements IPlayer
 {
-	// ¦1¦2¦3¦4¦3¦2¦1¦
-	// ¦2¦3¦4¦5¦4¦3¦2¦
-	// ¦3¦4¦5¦6¦5¦4¦3¦
-	// ¦2¦3¦4¦5¦4¦3¦2¦
-	// ¦1¦2¦3¦4¦3¦2¦1¦
-	// ¦0¦1¦2¦3¦2¦1¦0¦
-	
 	// ¦0¦1¦2¦3¦2¦1¦0¦
 	// ¦1¦2¦3¦4¦3¦2¦1¦
 	// ¦2¦3¦4¦5¦4¦3¦2¦
@@ -22,31 +15,23 @@ public class ComputerPlayer implements IPlayer
 	// ¦2¦3¦4¦5¦4¦3¦2¦
 	// ¦1¦2¦3¦4¦3¦2¦1¦
 	
-	// ¦1¦2¦3¦3¦3¦2¦1¦
-	// ¦1¦2¦3¦4¦3¦2¦1¦
-	// ¦3¦4¦5¦5¦5¦4¦3¦
-	// ¦2¦3¦4¦5¦4¦3¦2¦
-	// ¦2¦3¦4¦6¦4¦3¦2¦
-	// ¦0¦2¦4¦8¦4¦1¦0¦
-
-//	private static final int[][] quantifierMap = { { 0, 1, 2, 3, 2, 1 }, { 1, 2, 3, 4, 3, 2 }, { 2, 3, 4, 5, 4, 3 },
-//			{ 3, 4, 5, 6, 5, 4 }, { 2, 3, 4, 5, 4, 3 }, { 1, 2, 3, 4, 3, 2 }, { 0, 1, 2, 3, 2, 1 } };
 	private static final int[][] quantifierMap = { { 1, 2, 3, 2, 1,0 }, { 2, 3, 4, 3, 2,1 }, { 3, 4, 5, 4, 3,2 },
 		{ 4, 5, 6, 5, 4,3 }, { 3, 4, 5, 4, 3,2 }, { 2, 3, 4, 3, 2,1 }, { 1, 2, 3, 2, 1,0 } };
-//	private static final int[][] quantifierMap = { { 0, 2, 2, 3, 1,1 }, { 2, 3, 3, 4, 2,2 }, { 4, 4, 4, 5, 3,3 },
-//		{ 8, 6, 5, 5, 4,3 },{ 4, 4, 4, 5, 3,3 }, { 2, 3, 3, 4, 2,2 }, { 0, 2, 2, 3, 1,1 } };
+
 	private static final int[] sortedColumns = { 3, 2, 4, 1, 5, 0, 6};
 	
 	private static final int MAX_DEPTH = 42;
-	private static final int INITIAL_DEPTH = 10;
-	private static final int SAFETY_TIME = 20;
-	private static final int TIMEOUT_TIME = 10000;
+	private static final int DEPTH_OFFSET = 2;
+	private static final int INITIAL_DEPTH = 12;
+	
+	private static final int TIMEOUT_TIME = 7500;
 	
 	private static final int WINNING_SCORE = 1000;
 	private static final int UNDEF_SCORE = 1000000;
 	
 	private int evals, betacuts = 0;
-	private boolean timeout = false;
+	private int lastDepth = INITIAL_DEPTH + DEPTH_OFFSET;
+	private boolean foundFirstMove = false;
 
 	private Token token;
 
@@ -62,16 +47,16 @@ public class ComputerPlayer implements IPlayer
 
 	public int getNextColumn(Token[][] board)
 	{		
-		int tmpMaxDepth = INITIAL_DEPTH;
+		int tmpMaxDepth = this.lastDepth - DEPTH_OFFSET;
 		int tmpBestMove = -1;
-		this.timeout = false;
 		System.out.println("\n"+VierGewinnt.displayBoard(board));
 		Board boardCopy = new Board(board);
 		long startTime = System.currentTimeMillis();
+		this.foundFirstMove = false;
 		
 		try
 		{
-			while (!timeout && tmpMaxDepth < ComputerPlayer.MAX_DEPTH)
+			while (tmpMaxDepth < ComputerPlayer.MAX_DEPTH)
 			{
 				tmpBestMove = getBestMove(boardCopy, this.token, tmpMaxDepth, startTime);
 				tmpMaxDepth++;
@@ -81,6 +66,7 @@ public class ComputerPlayer implements IPlayer
 		{
 			System.out.print(e.getMessage());
 		}
+		this.lastDepth = tmpMaxDepth;
 		
 		return tmpBestMove;
 	}
@@ -97,7 +83,7 @@ public class ComputerPlayer implements IPlayer
 			if (board.isLegalMove(col))
 			{
 				int row = board.makeMove(col, player);
-				int eval = -negamax(board, enemy(player), -UNDEF_SCORE, UNDEF_SCORE, depth);
+				int eval = -negamax(board, enemy(player), -UNDEF_SCORE, UNDEF_SCORE, depth, time);
 				board.undoMove(col, row);
 				
 				if (eval > bestEval)
@@ -106,17 +92,15 @@ public class ComputerPlayer implements IPlayer
 					bestMove = col;
 				}
 			}
-			if (System.currentTimeMillis() - time >= ComputerPlayer.TIMEOUT_TIME - ComputerPlayer.SAFETY_TIME)
-				throw new TimeoutException();
 		}
 		
 		System.out.println(String.format("@Depth %d: Evals: %d, Score: %d, Cuts: %d, BestMove: %d", depth, evals, bestEval, betacuts, bestMove+1));
 		
-		if (bestEval >= WINNING_SCORE)
-			System.out.println("I'm going to win!");
-		else if (bestEval <= -WINNING_SCORE)
-			System.out.println("I'm going to lose!");
-		
+//		if (bestEval >= WINNING_SCORE)
+//			System.out.println("I'm going to win!");
+//		else if (bestEval <= -WINNING_SCORE)
+//			System.out.println("I'm going to lose!");
+		this.foundFirstMove = true;
 		return bestMove;
 	}
 
@@ -141,11 +125,13 @@ public class ComputerPlayer implements IPlayer
 		return score;
 	}
 
-	private int negamax(Board board, Token currentPlayer, int alpha, int beta, int depth) 
+	private int negamax(Board board, Token currentPlayer, int alpha, int beta, int depth, long time) throws TimeoutException 
 	{
 		evals++;
-		
 		int eval = -UNDEF_SCORE;
+		
+		if (this.foundFirstMove && System.currentTimeMillis() - time >= ComputerPlayer.TIMEOUT_TIME)
+			throw new TimeoutException();
 		
 		Token winner = board.getWinner();
 		if (winner != Token.empty)
@@ -172,7 +158,7 @@ public class ComputerPlayer implements IPlayer
 				// Make move
 				int row = board.makeMove(col, currentPlayer);
 				// Evaluate next move
-				eval = -negamax(board, enemy(currentPlayer), -beta, -alpha, depth - 1);
+				eval = -negamax(board, enemy(currentPlayer), -beta, -alpha, depth - 1, time);
 				// Undo previous move
 				board.undoMove(col, row);
 				// Pruning
@@ -209,15 +195,6 @@ public class ComputerPlayer implements IPlayer
 		public TimeoutException()
 		{
 			super("Computation timeout occured!");
-		}
-	}
-	
-	private class BestMove
-	{
-		private int column = -1;
-		public void set(int c)
-		{
-			this.column = c;
 		}
 	}
 }
